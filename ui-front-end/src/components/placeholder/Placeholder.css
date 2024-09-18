@@ -1,0 +1,30 @@
+.Placeholder {
+  display: flex;
+  flex-direction: column;
+  font-size: 24px;
+  gap: 24px;
+}
+
+.Placeholder-instructions {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: center;
+  position: relative;
+}
+
+.Placeholder-design {
+  background-image: url(/market-depth.png);
+  background-repeat: no-repeat;
+  background-position-x: center;
+  background-position-y: center;
+  background-size: contain;
+  flex: 1 1 auto;
+}
+
+.Placeholder-buttonContainer {
+  align-items: center;
+  display: flex;
+  flex: 0 0 60px;
+  justify-content: center;
+}
