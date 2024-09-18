@@ -1,10 +1,11 @@
 package codingblackfemales.gettingstarted;
 
-import codingblackfemales.action.Action;
-import codingblackfemales.action.NoAction;
+import codingblackfemales.action.*;
 import codingblackfemales.algo.AlgoLogic;
 import codingblackfemales.sotw.SimpleAlgoState;
+import codingblackfemales.sotw.marketdata.BidLevel;
 import codingblackfemales.util.Util;
+import messages.order.Side;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,16 +16,18 @@ public class MyAlgoLogic implements AlgoLogic {
     @Override
     public Action evaluate(SimpleAlgoState state) {
 
+        BidLevel level = state.getBidAt(0);
+        final long price = level.price;
+        final long quantity = level.quantity;
+
         var orderBookAsString = Util.orderBookToString(state);
 
         logger.info("[MYALGO] The state of the order book is:\n" + orderBookAsString);
 
-        /********
-         *
-         * Add your logic here....
-         *
-         */
-
-        return NoAction.NoAction;
+        if (state.getChildOrders().size() < 1) {
+            return new CreateChildOrder(Side.BUY, quantity, price);
+        } else {
+            return NoAction.NoAction;
+        }
     }
 }
