@@ -1,6 +1,6 @@
 import { Placeholder } from "../placeholder";
-//import { useMarketDepthData } from "./useMarketDepthData";
-//import { schemas } from "../../data/algo-schemas";
+import { useMarketDepthData } from "./useMarketDepthData";
+import { schemas } from "../../data/algo-schemas";
 
 // prettier-ignore
 // const testData: MarketDepthRow[] = [

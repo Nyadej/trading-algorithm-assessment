@@ -1,6 +1,6 @@
 body {
-  /** CBF colours */
-  --darkest-grey: #2d2d2d;
+  /** Naomi's colours */
+  --darkest-grey: #142d4c; 
 
   padding: 0;
   margin: 0;
@@ -13,3 +13,4 @@ body {
   display: flex;
   flex: 0 0 32px;
 }
+
