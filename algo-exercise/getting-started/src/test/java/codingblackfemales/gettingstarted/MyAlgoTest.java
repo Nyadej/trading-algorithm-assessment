@@ -2,7 +2,8 @@ package codingblackfemales.gettingstarted;
 
 import codingblackfemales.algo.AlgoLogic;
 import org.junit.Test;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.junit.Assert.assertEquals;
 
 
@@ -24,15 +25,35 @@ public class MyAlgoTest extends AbstractAlgoTest {
         return new MyAlgoLogic();
     }
 
-
     @Test
-    public void testDispatchThroughSequencer() throws Exception {
+    public void testOrderCreation() throws Exception {
 
         //create a sample market data tick....
         send(createTick());
+        send(createTick());
+        send(createTick());
 
-        //simple assert to check we had 1 order created
+        //simple assert to check 3 orders are created
         assertEquals(container.getState().getChildOrders().size(), 3);
 
     }
+
+    @Test
+    public void testOrderCreationAndLastOrderCancellation() throws Exception {
+
+        // create 3 orders
+        send(createTick());
+        send(createTick());
+        send(createTick());
+
+        // check 3 orders were created
+        assertEquals(container.getState().getActiveChildOrders().size(), 3);
+
+        // extra tick to trigger cancellation of THE EXTRA ORDER ONLY
+        send(createTick());
+
+        // check there are still 3 orders
+        assertEquals(container.getState().getActiveChildOrders().size(), 3);
+    }
+
 }
