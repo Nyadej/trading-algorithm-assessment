@@ -10,14 +10,16 @@ import org.slf4j.LoggerFactory;
 
 public class MyAlgoLogic implements AlgoLogic {
 
-    private long shares = 1000L; // set initial amount of shares that I have to 1000
-    private long profit = 0L; // to track the gains and losses from each trade
+    private long shares = 1000L; // Setting initial shares to 1000
+    private long profit = 0L; // to track profit/loss based on trades
     private long totalSpent = 0L;
     private long totalEarned = 0L;
 
     enum TradeAction { // defining three possible actions my algo can take
         BUY, SELL, HOLD
     }
+
+    // TODO: IMPLEMENT MARKET VOLUME LIMIT FOR ORDER CREATION
 
     private static final Logger logger = LoggerFactory.getLogger(MyAlgoLogic.class);
 
@@ -26,7 +28,7 @@ public class MyAlgoLogic implements AlgoLogic {
 
         TradeAction action; // declaring a variable action of type TradeAction, which is an enum
 
-        BidLevel level = state.getBidAt(0);
+        BidLevel level = state.getBidAt(0); // to get the first bid from the market data
         final long price = level.price;
         final long quantity = level.quantity;
 
@@ -35,23 +37,26 @@ public class MyAlgoLogic implements AlgoLogic {
         final int TOTAL_ORDER_LIMIT = 10;
 
         // Get all active child orders
-        final var activeOrders = state.getActiveChildOrders();
-        final var totalOrders = state.getChildOrders().size();
+        final var activeOrders = state.getActiveChildOrders(); // currently active (unfilled or un-cancelled) orders
+        final var totalOrders = state.getChildOrders().size(); // total number of orders, active or inactive
 
-
+        // the total number of orders should not exceed 10
         if (totalOrders < TOTAL_ORDER_LIMIT) {
-            // If there are less than 3 child orders, create one
+            // If there are less than 3 child orders, BUY (more)
             if (state.getActiveChildOrders().size() < DESIRED_ACTIVE_ORDERS) {
                 action = TradeAction.BUY;
 
-                // If there are more than 3 orders, cancel one
+                // If there are more than 3 orders, SELL
             } else if (state.getActiveChildOrders().size() >= DESIRED_ACTIVE_ORDERS) {
                 action = TradeAction.SELL;
 
+                // For anything else, hold
+                // TODO THINK OF HOW THIS CAN BE USED WHEN PROFIT IS NOT MADE
             } else {
                 action = TradeAction.HOLD;
             }
 
+            // logic behind the BUY, SELL, HOLD actions
             switch (action) {
                 case BUY:
                     logger.info("[DYNAMIC-PASSIVE-ALGO] You have: {} child orders. \nCreating a new order", state.getActiveChildOrders().size());
@@ -82,7 +87,7 @@ public class MyAlgoLogic implements AlgoLogic {
                     return NoAction.NoAction;
             }
         }
-        return NoAction.NoAction;
+        return NoAction.NoAction; // once order limit is reached, the algorithm should stop
     }
 
 }
