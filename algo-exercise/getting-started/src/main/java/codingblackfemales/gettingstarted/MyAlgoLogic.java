@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 public class MyAlgoLogic implements AlgoLogic {
 
-    private long shares = 1000L; // Setting initial shares to 1000
+    private long sharesOwned = 1000L; // Setting initial sharesOwned to 1000
     private long profit = 0L; // to track profit/loss based on trades
     private long totalSpent = 0L;
     private long totalEarned = 0L;
@@ -34,7 +34,7 @@ public class MyAlgoLogic implements AlgoLogic {
 
         // CONSTANTS
         final int DESIRED_ACTIVE_ORDERS = 3;
-        final int TOTAL_ORDER_LIMIT = 10;
+        final int TOTAL_ORDER_LIMIT = 10; // exit statement
 
         // Get all active child orders
         final var activeOrders = state.getActiveChildOrders(); // currently active (unfilled or un-cancelled) orders
@@ -43,7 +43,7 @@ public class MyAlgoLogic implements AlgoLogic {
         // the total number of orders should not exceed 10
         if (totalOrders < TOTAL_ORDER_LIMIT) {
             // If there are less than 3 child orders, BUY (more)
-            if (state.getActiveChildOrders().size() < DESIRED_ACTIVE_ORDERS) {
+            if (activeOrders.size() < DESIRED_ACTIVE_ORDERS) {
                 action = TradeAction.BUY;
 
                 // If there are more than 3 orders, SELL
@@ -55,15 +55,17 @@ public class MyAlgoLogic implements AlgoLogic {
             } else {
                 action = TradeAction.HOLD;
             }
+        } else {
+               return NoAction.NoAction; // once order limit is reached, the algorithm should stop
+            }
 
-            // logic behind the BUY, SELL, HOLD actions
             switch (action) {
                 case BUY:
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] You have: {} child orders. \nCreating a new order", state.getActiveChildOrders().size());
-                    shares += quantity;
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] You have: {} child orders. \nCreating a new order", activeOrders.size());
+                    sharesOwned += quantity;
                     totalSpent += price * quantity; // because in order books, the price = the price per unit of the quantity being traded
                     profit = totalEarned - totalSpent;
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", shares, totalSpent, totalEarned, profit);
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
                     return new CreateChildOrder(Side.BUY, quantity, price);
 
                 case SELL:
@@ -74,20 +76,20 @@ public class MyAlgoLogic implements AlgoLogic {
                     long oldestOrderQuantity = childOrder.getQuantity();
                     long oldestOrderPrice = childOrder.getPrice();
                     logger.info("Active orders: {} ", activeOrders);
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] You have: {} child orders. \nCancelling an excess order", state.getActiveChildOrders().size());
-                    shares -= oldestOrderQuantity;
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] You have: {} child orders. \nCancelling an excess order", activeOrders.size());
+                    sharesOwned -= oldestOrderQuantity;
                     totalEarned += oldestOrderPrice * oldestOrderQuantity;
                     profit += totalEarned - totalSpent;
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", shares, totalSpent, totalEarned, profit);
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
 
                     return new CancelChildOrder(lastOrder);
 
                 default:
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}.", shares);
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}.", sharesOwned);
                     return NoAction.NoAction;
+
+                    // TODO MAKE ALGO PRINT OUT ALL ORDERS THAT HAVE NOT BEEN FILLED?
             }
         }
-        return NoAction.NoAction; // once order limit is reached, the algorithm should stop
     }
 
-}
