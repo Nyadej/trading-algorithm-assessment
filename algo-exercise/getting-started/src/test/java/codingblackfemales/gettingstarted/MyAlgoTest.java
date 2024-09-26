@@ -2,8 +2,6 @@ package codingblackfemales.gettingstarted;
 
 import codingblackfemales.algo.AlgoLogic;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import static org.junit.Assert.assertEquals;
 
 
@@ -26,7 +24,7 @@ public class MyAlgoTest extends AbstractAlgoTest {
     }
 
     @Test
-    public void testOrderCreation() throws Exception {
+    public void testBuy() throws Exception {
 
         //create a sample market data tick....
         send(createTick());
@@ -34,12 +32,12 @@ public class MyAlgoTest extends AbstractAlgoTest {
         send(createTick());
 
         //simple assert to check 3 orders are created
-        assertEquals(container.getState().getChildOrders().size(), 3);
+        assertEquals(container.getState().getActiveChildOrders().size(), 3);
 
     }
 
     @Test
-    public void testOrderCreationAndLastOrderCancellation() throws Exception {
+    public void testCancel() throws Exception {
 
         // create 3 orders
         send(createTick());
@@ -54,6 +52,24 @@ public class MyAlgoTest extends AbstractAlgoTest {
 
         // check there are still 3 orders
         assertEquals(container.getState().getActiveChildOrders().size(), 3);
+    }
+
+    @Test
+    public void testHold() throws Exception {
+
+        // First, create 10 orders to reach the total order limit
+        for (int i = 0; i < 10; i++) {
+            send(createTick());
+        }
+
+        // Check 10 orders were created
+        assertEquals(container.getState().getChildOrders().size(), 10);
+
+        // extra tick to trigger cancellation of THE EXTRA ORDER ONLY
+        send(createTick());
+
+        // check there are still 10 orders
+        assertEquals(container.getState().getChildOrders().size(), 10);
     }
 
 }
