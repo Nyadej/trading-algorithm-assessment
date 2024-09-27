@@ -16,7 +16,7 @@ public class MyAlgoLogic implements AlgoLogic {
     private long profit = 0L; // tracks the overall profit/loss
 
     enum TradeAction { // defining three possible actions my algo can take
-        BUY, SELL, HOLD
+        BUY, SELL, CANCEL, HOLD
     }
 
     private static final Logger logger = LoggerFactory.getLogger(MyAlgoLogic.class);
@@ -62,69 +62,79 @@ public class MyAlgoLogic implements AlgoLogic {
         logger.info("Current VWAP value = {}", vWAP);
 
         // Debugging***
-        logger.info("Checking if price < VWAP: {} < {}", price, vWAP);
-
-        // TODO IMPLEMENT SELL LOGIC BASED ON VWAP
+        logger.info("Checking if price: {} < VWAP: {}", price, vWAP);
 
         // the total number of orders should not exceed 10
-        if (totalOrders < TOTAL_ORDER_LIMIT) {
+        if (totalOrders <= TOTAL_ORDER_LIMIT) {
+            logger.info("[DYNAMIC-PASSIVE-ALGO] Total order limit reached. No new orders will be created.");
+            return NoAction.NoAction;
+        }
             // If there are less than 3 child orders, BUY (more)
             if (price < vWAP && activeOrders.size() < DESIRED_ACTIVE_ORDERS) {
                 logger.info("Comparing price {} with VWAP {} for a potential BUY", price, vWAP);
                 action = TradeAction.BUY;
 
                 // If there are more than 3 orders, SELL
-            } else if (price > vWAP && state.getActiveChildOrders().size() >= DESIRED_ACTIVE_ORDERS) {
+            } else if (price > vWAP && state.getActiveChildOrders().size() <= DESIRED_ACTIVE_ORDERS) {
                 action = TradeAction.SELL;
 
+            } else if ((!state.getActiveChildOrders().isEmpty()) && (vWAP <= 70 || vWAP >= 100)) {
+                action = TradeAction.CANCEL;
+
                 // For anything else, hold
-                // TODO THINK OF HOW THIS CAN BE USED WHEN PROFIT IS NOT MADE
             } else {
                 action = TradeAction.HOLD;
             }
-        } else {
-               return NoAction.NoAction; // once order limit is reached, the algorithm should stop
-            }
+        /*} else {
+            return NoAction.NoAction; // once order limit is reached, the algorithm should stop
+        }*/
 
-            switch (action) {
-                case BUY:
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is less than VWAP: {}, buying shares", price, vWAP);
-                    sharesOwned += quantity;
-                    totalSpent += price * quantity; // because in order books, the price = the price per unit of the quantity being traded
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {}", sharesOwned, totalSpent);
-                    return new CreateChildOrder(Side.BUY, quantity, price);
+        switch (action) {
+            case BUY:
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is less than VWAP: {}, buying shares", price, vWAP);
+                sharesOwned += quantity;
+                totalSpent += price * quantity; // because in order books, the price = the price per unit of the quantity being traded
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {}", sharesOwned, totalSpent);
+                return new CreateChildOrder(Side.BUY, quantity, price);
 
-                case SELL:
-                    // 1. get the last active order
-                    var lastOrder = activeOrders.get(activeOrders.size() - 1);
+            case SELL:
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is higher than VWAP: {}, selling shares", price, vWAP);
+                sharesOwned -= quantity;
+                totalEarned += price * quantity;
+                profit = totalEarned - totalSpent;
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
+                return new CreateChildOrder(Side.SELL, quantity, price);
 
-                    // 2. find the oldest active order
-                    final var oldestOrder = activeOrders.stream().findFirst().orElse(null);
-                    //var childOrder = oldestOrder.get();
+            case CANCEL:
+                // 1. get the last active order
+                var lastOrder = activeOrders.get(activeOrders.size() - 1);
 
-                    // 3. check if the oldest order exists
-                    if (oldestOrder !=null) {
-                        // 4. extract the quantity and price of the oldest order
-                        long oldestOrderQuantity = oldestOrder.getQuantity();
-                        long oldestOrderPrice = oldestOrder.getPrice();
+                // 2. find the oldest active order
+                final var oldestOrder = activeOrders.stream().findFirst().orElse(null);
+                //var childOrder = oldestOrder.get();
 
-                        logger.info("Active orders: {} ", activeOrders);
-                        logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is higher than VWAP: {}, selling shares", price, vWAP);
-                        sharesOwned -= oldestOrderQuantity;
-                        totalEarned += oldestOrderPrice * oldestOrderQuantity;
-                        profit = totalEarned - totalSpent;
-                        logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
+                // 3. check if the oldest order exists
+                if (oldestOrder !=null) {
+                    // 4. extract the quantity and price of the oldest order
+                    long oldestOrderQuantity = oldestOrder.getQuantity();
+                    long oldestOrderPrice = oldestOrder.getPrice();
 
-                        return new CancelChildOrder(lastOrder);
-                    }
-                    return NoAction.NoAction;
+                    logger.info("Active orders: {} ", activeOrders);
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is higher than VWAP: {}, selling shares", price, vWAP);
+                    sharesOwned -= oldestOrderQuantity;
+                    totalEarned += oldestOrderPrice * oldestOrderQuantity;
+                    profit = totalEarned - totalSpent;
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
 
-                default:
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}.", sharesOwned);
-                    return NoAction.NoAction;
+                    return new CancelChildOrder(lastOrder);
+                }
+                return NoAction.NoAction;
 
-                    // TODO MAKE ALGO PRINT OUT ALL ORDERS THAT HAVE NOT BEEN FILLED?
-            }
+            default:
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}.", sharesOwned);
+                return NoAction.NoAction;
+
+            // TODO MAKE ALGO PRINT OUT ALL ORDERS THAT HAVE NOT BEEN FILLED?
         }
     }
-
+}
