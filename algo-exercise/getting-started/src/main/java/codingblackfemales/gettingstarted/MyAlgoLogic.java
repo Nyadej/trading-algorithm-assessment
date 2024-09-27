@@ -72,7 +72,7 @@ public class MyAlgoLogic implements AlgoLogic {
                     logger.info("[DYNAMIC-PASSIVE-ALGO] You have: {} child orders. \nCancelling an excess order", state.getActiveChildOrders().size());
                     shares -= oldestOrderQuantity;
                     totalEarned += oldestOrderPrice * oldestOrderQuantity;
-                    profit += totalEarned - totalSpent;
+                    profit = totalEarned - totalSpent;
                     logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", shares, totalSpent, totalEarned, profit);
 
                     return new CancelChildOrder(lastOrder);
