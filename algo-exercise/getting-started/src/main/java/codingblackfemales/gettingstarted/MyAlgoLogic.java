@@ -19,8 +19,6 @@ public class MyAlgoLogic implements AlgoLogic {
         BUY, SELL, HOLD
     }
 
-    // TODO: IMPLEMENT MARKET VOLUME LIMIT FOR ORDER CREATION
-
     private static final Logger logger = LoggerFactory.getLogger(MyAlgoLogic.class);
 
     @Override
@@ -43,7 +41,7 @@ public class MyAlgoLogic implements AlgoLogic {
         // the total number of orders should not exceed 10
         if (totalOrders < TOTAL_ORDER_LIMIT) {
             // If there are less than 3 child orders, BUY (more)
-            if (activeOrders.size() < DESIRED_ACTIVE_ORDERS) {
+            if (state.getActiveChildOrders().size() < DESIRED_ACTIVE_ORDERS) {
                 action = TradeAction.BUY;
 
                 // If there are more than 3 orders, SELL
@@ -54,9 +52,6 @@ public class MyAlgoLogic implements AlgoLogic {
                 // TODO THINK OF HOW THIS CAN BE USED WHEN PROFIT IS NOT MADE
             } else {
                 action = TradeAction.HOLD;
-            }
-        } else {
-               return NoAction.NoAction; // once order limit is reached, the algorithm should stop
             }
 
             switch (action) {
@@ -79,7 +74,7 @@ public class MyAlgoLogic implements AlgoLogic {
                     logger.info("[DYNAMIC-PASSIVE-ALGO] You have: {} child orders. \nCancelling an excess order", activeOrders.size());
                     sharesOwned -= oldestOrderQuantity;
                     totalEarned += oldestOrderPrice * oldestOrderQuantity;
-                    profit += totalEarned - totalSpent;
+                    profit = totalEarned - totalSpent;
                     logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
 
                     return new CancelChildOrder(lastOrder);
@@ -88,8 +83,10 @@ public class MyAlgoLogic implements AlgoLogic {
                     logger.info("[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}.", sharesOwned);
                     return NoAction.NoAction;
 
-                    // TODO MAKE ALGO PRINT OUT ALL ORDERS THAT HAVE NOT BEEN FILLED?
+                // TODO MAKE ALGO PRINT OUT ALL ORDERS THAT HAVE NOT BEEN FILLED?
             }
         }
+        return NoAction.NoAction; // once order limit is reached, the algorithm should stop
     }
+}
 
