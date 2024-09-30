@@ -57,19 +57,6 @@ public class MyAlgoTest extends AbstractAlgoTest {
     /*@Test
     public void testHold() throws Exception {
 
-        // First, create 10 orders to reach the total order limit
-        for (int i = 0; i < 10; i++) {
-            send(createTick());
-        }
-
-        // Check 10 orders were created
-        assertEquals(container.getState().getChildOrders().size(), 10);
-
-        // extra tick to trigger cancellation of THE EXTRA ORDER ONLY
-        send(createTick());
-
-        // check there are still 10 orders
-        assertEquals(container.getState().getChildOrders().size(), 10);
     }*/
 
 }
