@@ -1,6 +1,7 @@
 package codingblackfemales.gettingstarted;
 
 import codingblackfemales.action.*;
+import codingblackfemales.action.Action;
 import codingblackfemales.algo.AlgoLogic;
 import codingblackfemales.sotw.SimpleAlgoState;
 import codingblackfemales.sotw.marketdata.BidLevel;
@@ -70,12 +71,10 @@ public class MyAlgoLogic implements AlgoLogic {
             return NoAction.NoAction;
         }
             // If there are less than 3 child orders, BUY (more)
-<<<<<<< HEAD
             if (price < vWAP && activeOrders.size() < DESIRED_ACTIVE_ORDERS) {
                 logger.info("Comparing price {} with VWAP {} for a potential BUY", price, vWAP);
-=======
+
             if (state.getActiveChildOrders().size() < DESIRED_ACTIVE_ORDERS) {
->>>>>>> c02bb6329c6722e219a4e015404dc7d99726716e
                 action = TradeAction.BUY;
 
                 // If there are more than 3 orders, SELL
@@ -89,12 +88,10 @@ public class MyAlgoLogic implements AlgoLogic {
             } else {
                 action = TradeAction.HOLD;
             }
-<<<<<<< HEAD
+
         /*} else {
             return NoAction.NoAction; // once order limit is reached, the algorithm should stop
         }*/
-=======
->>>>>>> c02bb6329c6722e219a4e015404dc7d99726716e
 
         switch (action) {
             case BUY:
@@ -150,6 +147,3 @@ public class MyAlgoLogic implements AlgoLogic {
     }
 
 }
-
-}
-
