@@ -1,8 +1,19 @@
 import { Placeholder } from "../placeholder";
 import { useMarketDepthData } from "./useMarketDepthData";
 import { schemas } from "../../data/algo-schemas";
+import { MarketDepthPanel } from "./MarketDepthPanel";
 
-// prettier-ignore
+// Define MarketDepthRow interface to describe the shape of your data
+export interface MarketDepthRow {
+  level: number;
+  bidQuantity: number;
+  bid: number;
+  offer: number;
+  offerQuantity: number;
+  symbolLevel: string; // Add any additional properties if needed
+}
+
+// // Test Data
 // const testData: MarketDepthRow[] = [
 //   { symbolLevel:"1230", level: 0, bid: 1000, bidQuantity: 500, offer: 1010, offerQuantity: 700 },
 //   { symbolLevel:"1231", level: 1, bid: 990, bidQuantity: 700, offer: 1012, offerQuantity: 400 },
@@ -16,10 +27,14 @@ import { schemas } from "../../data/algo-schemas";
 //   { symbolLevel:"1239", level: 9, bid: 940, bidQuantity: 200, offer: 1024, offerQuantity: 800 },
 // ];
 
-/**
- * TODO
- */
 export const MarketDepthFeature = () => {
-  // const data = useMarketDepthData(schemas.prices);
-  return <Placeholder />;
+  const data = useMarketDepthData(schemas.prices) || testData; // gets the data dynamically
+
+  // passes the fetched data to MarketDepthPanel component, which will render the table
+  return (
+        <div>
+        <MarketDepthPanel data={data} />
+        </div>
+      );
 };
+
