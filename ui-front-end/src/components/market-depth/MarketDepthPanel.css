@@ -1,0 +1,70 @@
+.MarketDepthPanelContainer { /* chatGPT help as table was cutting off level 9 */
+    max-height: 500px; /* Increase max height to accommodate more rows */
+    overflow-y: auto;  /* Ensure vertical scrolling if content exceeds the height */
+    margin-bottom: 20px; /* Optional: Adds spacing at the bottom */
+}
+
+.MarketDepthPanel {
+    width: 90%;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.MarketDepthPanel th {
+    text-align: center;
+    padding: 6px 8px;
+}
+
+.MarketDepthPanel td {
+    padding: 6px 8px;
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+/* Alternating row colors */
+.MarketDepthPanel tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Bid Quantity */
+.MarketDepthPanel td:nth-child(2) {
+    color: blue;
+    font-weight: bold;
+}
+
+/* Bid Price */
+.MarketDepthPanel td:nth-child(3) {
+    font-weight: bold;
+}
+
+/* Offer Price */
+.MarketDepthPanel td:nth-child(4) {
+    font-weight: bold;
+}
+
+/* Offer Quantity */
+.MarketDepthPanel td:nth-child(5) {
+    color: red;
+    font-weight: bold;
+}
+
+/* Special effect - highlight hovering */
+.MarketDepthPanel tbody tr:hover {
+    background-color: #cfcfc4; /* using colour palette */
+    cursor: pointer;
+}
+
+.price-arrow {
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+.up-arrow {
+    color: green;
+    font-size: 16px;
+}
+
+.down-arrow {
+    color: red;
+    font-size: 16px;
+}
