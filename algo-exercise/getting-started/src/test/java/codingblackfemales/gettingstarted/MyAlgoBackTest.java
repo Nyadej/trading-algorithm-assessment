@@ -3,6 +3,18 @@ package codingblackfemales.gettingstarted;
 import codingblackfemales.algo.AlgoLogic;
 import org.junit.Test;
 
+/**
+ * This test plugs together all of the infrastructure, including the order book (which you can trade against)
+ * and the market data feed.
+ *
+ * If your algo adds orders to the book, they will reflect in your market data coming back from the order book.
+ *
+ * If you cross the spread (i.e. you BUY an order with a price which is == or > askPrice()) you will match, and receive
+ * a fill back into your order from the order book (visible from the algo in the childOrders of the state object).
+ *
+ * If you cancel the order your child order will show the order status as cancelled in the childOrders of the state object.
+ *
+ */
 public class MyAlgoBackTest extends AbstractAlgoBackTest {
 
     @Override
@@ -13,13 +25,26 @@ public class MyAlgoBackTest extends AbstractAlgoBackTest {
     @Test
     public void testExampleBackTest() throws Exception {
         //create a sample market data tick....
-        send(createTick());
 
+        send(createTickBuy1());
+        send(createTickBuy2());
+        send(createTickSell());
+        send(createTickBuy3());
+        send(createTickCancel());
+
+        send(createTickBuy4());
+
+        send(createTickBuy5());
+        send(createTickSell3());
+
+        // with the above ticks current ROI is ~36%
+
+        //send(createTickBuy6());
+        //send(createTickSell4());
         //ADD asserts when you have implemented your algo logic
         //assertEquals(container.getState().getChildOrders().size(), 3);
 
         //when: market data moves towards us
-        //send(createTick2());
 
         //then: get the state
         var state = container.getState();
