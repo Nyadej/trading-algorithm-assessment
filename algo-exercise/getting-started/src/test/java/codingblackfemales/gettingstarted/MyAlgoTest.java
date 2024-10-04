@@ -1,8 +1,10 @@
 package codingblackfemales.gettingstarted;
 
 import codingblackfemales.algo.AlgoLogic;
+import messages.order.Side;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -24,39 +26,31 @@ public class MyAlgoTest extends AbstractAlgoTest {
     }
 
     @Test
-    public void testBuy() throws Exception {
+    public void testBuyAction() throws Exception {
+        // 1. Send a BUY tick to create BUY orders
+        send(createTickBuy());
 
-        //create a sample market data tick....
-        send(createTick());
-        send(createTick());
-        send(createTick());
-
-        //simple assert to check 3 orders are created
+        // 2. Assert that 3 BUY orders have been created
         assertEquals(container.getState().getActiveChildOrders().size(), 3);
 
     }
 
     @Test
-    public void testCancel() throws Exception {
+    public void testSellAction() throws Exception {
+        // 1. Send a BUY tick to create initial BUY orders
+        send(createTickBuy());
 
-        // create 3 orders
-        send(createTick());
-        send(createTick());
-        send(createTick());
-
-        // check 3 orders were created
+        // 2. Assert that 3 BUY orders have been created
         assertEquals(container.getState().getActiveChildOrders().size(), 3);
 
-        // extra tick to trigger cancellation of THE EXTRA ORDER ONLY
-        send(createTick());
+        // 3. Send a SELL tick to trigger a SELL action
+        send(createTickSell());
 
-        // check there are still 3 orders
-        assertEquals(container.getState().getActiveChildOrders().size(), 3);
+        // 4. Use Java Streams to verify a SELL order exists
+        boolean sellOrderExists = container.getState().getActiveChildOrders().stream()
+                .anyMatch(order -> order.getSide() == Side.SELL
+                );
+
+        assertTrue("Sell order present!", sellOrderExists);
     }
-
-    /*@Test
-    public void testHold() throws Exception {
-
-    }*/
-
 }
