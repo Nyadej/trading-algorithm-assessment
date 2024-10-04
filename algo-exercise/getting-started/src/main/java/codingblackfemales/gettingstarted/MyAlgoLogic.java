@@ -4,10 +4,12 @@ import codingblackfemales.action.*;
 import codingblackfemales.action.Action;
 import codingblackfemales.algo.AlgoLogic;
 import codingblackfemales.sotw.SimpleAlgoState;
+import codingblackfemales.sotw.marketdata.AskLevel;
 import codingblackfemales.sotw.marketdata.BidLevel;
 import messages.order.Side;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 public class MyAlgoLogic implements AlgoLogic {
 
@@ -15,8 +17,6 @@ public class MyAlgoLogic implements AlgoLogic {
     private long totalSpent = 0L; // tack the total money spent on buying shares
     private long totalEarned = 0L; // track the total money earned from selling shares
     private long profit = 0L; // tracks the overall profit/loss
-
-    private SimpleAlgoState currentState; // to store the current state for the toString method
 
     enum TradeAction { // defining three possible actions my algo can take
         BUY, SELL, CANCEL, HOLD
@@ -35,31 +35,44 @@ public class MyAlgoLogic implements AlgoLogic {
 
         // CONSTANTS
         final int DESIRED_ACTIVE_ORDERS = 3;
-        final int TOTAL_ORDER_LIMIT = 10; // exit statement
+        final int TOTAL_ORDER_LIMIT = 6; // exit statement
 
         // Get all active child orders
         final var activeOrders = state.getActiveChildOrders(); // currently active (unfilled or un-cancelled) orders
         final var totalOrders = state.getChildOrders().size(); // total number of orders, active or inactive
 
-        long totalMarketValue = 0; // store the total number of all active orders
+        double totalMarketValue = 0.0; // store the total number of all active orders
         long totalQuantity = 0; // stores the total number of shares (quantity) from all active orders
 
+        // Consider the top 3 bid and ask levels
+        int orderBookLevels = 3;
+
         // looping through active orders
-        for (int i = 0; i < activeOrders.size(); i++) {
-            totalMarketValue += activeOrders.get(i).getQuantity() * activeOrders.get(i).getPrice();
-            totalQuantity += activeOrders.get(i).getQuantity();
+        for (int i = 0; i < orderBookLevels; i++) {
+            BidLevel bidLevel = state.getBidAt(i);
+            if (bidLevel !=null) {
+                totalMarketValue += bidLevel.price * bidLevel.quantity;
+                totalQuantity += bidLevel.quantity;
+        }
+
+            // Get ask level
+            AskLevel askLevel = state.getAskAt(i);
+            if (askLevel != null) {
+                totalMarketValue += askLevel.price * askLevel.quantity;
+                totalQuantity += askLevel.quantity;
+            }
         }
 
         // calculating VWAP (volume weighted average price)
         double vWAP;
         if (totalQuantity <= 0) {
             // default VWAP if there are no active orders
-            vWAP = 78;
+            vWAP = 90;
             logger.info("No active orders, using hardcoded initial VWAP: {}", vWAP);
 
             // if there are active order, calculate VWAP
         } else {
-            vWAP = (double) totalMarketValue / (double) totalQuantity;
+            vWAP = totalMarketValue / (double) totalQuantity;
             logger.info("Current total market value = {}", totalMarketValue);
             logger.info("Current total quantity = {}", totalQuantity);
         }
@@ -81,11 +94,11 @@ public class MyAlgoLogic implements AlgoLogic {
             action = TradeAction.BUY;
 
             // If the price is higher than VWAP and there are active orders to sell, SELL
-        } else if (price > vWAP && state.getActiveChildOrders().size() <= DESIRED_ACTIVE_ORDERS && sharesOwned >= 500) {
+        } else if (price > vWAP && state.getActiveChildOrders().size() <= DESIRED_ACTIVE_ORDERS && sharesOwned > 0) {
             action = TradeAction.SELL;
 
             // If the cancel condition is met (VWAP too low or too high), CANCEL the oldest active order
-        } else if ((!state.getActiveChildOrders().isEmpty()) && (vWAP <= 65 || vWAP >= 85)) {
+        } else if ((vWAP <= 60 || vWAP >= 90) && !state.getActiveChildOrders().isEmpty()) {
                     logger.info("Cancel condition triggered: VWAP is: {} .", vWAP);
                     logger.info("Number of active orders: {}", activeOrders.size());
                     action = TradeAction.CANCEL;
@@ -107,10 +120,14 @@ public class MyAlgoLogic implements AlgoLogic {
                         logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is higher than VWAP: {}, selling shares", price, vWAP);
 
                         // Ensure you own enough shares to sell
-                        if (sharesOwned >= quantity) {
+                        if (sharesOwned > 0) {
                             sharesOwned -= quantity;
                             totalEarned += price * quantity;
-                            profit = totalEarned - totalSpent;
+
+                            // Include market value of remaining shares in profit calculation
+                            long marketValueOfSharesOwned = sharesOwned * price;
+                            profit = (totalEarned + marketValueOfSharesOwned) - totalSpent;
+
                             logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
                             return new CreateChildOrder(Side.SELL, quantity, price);
                         } else {
@@ -131,16 +148,11 @@ public class MyAlgoLogic implements AlgoLogic {
                             logger.info("Cancelling oldest order: Price: {}, Quantity: {}", oldestOrder.getPrice(), oldestOrder.getQuantity());
                             logger.info("Current VWAP: {} (out of the acceptable range)", vWAP);
 
-                            sharesOwned -= oldestOrderQuantity;
-                            totalEarned += oldestOrderPrice * oldestOrderQuantity;
-                            profit = totalEarned - totalSpent;
-
-                            logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
-
                             return new CancelChildOrder(oldestOrder);
+                        } else {
+                            logger.info("No valid order found to cancel.");
+                            return NoAction.NoAction;
                         }
-                        logger.info("No valid order found to cancel.");
-                        return NoAction.NoAction;
 
                     default:
                         logger.info("[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}.", sharesOwned);
