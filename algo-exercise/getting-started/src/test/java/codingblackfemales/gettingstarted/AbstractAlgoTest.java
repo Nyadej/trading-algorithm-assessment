@@ -18,7 +18,6 @@ import java.nio.ByteBuffer;
 
 public abstract class AbstractAlgoTest extends SequencerTestCase {
 
-
     protected AlgoContainer container;
 
     @Override
@@ -104,3 +103,4 @@ public abstract class AbstractAlgoTest extends SequencerTestCase {
     }
 
 }
+//fixing commits
