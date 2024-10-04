@@ -17,6 +17,7 @@ import static org.junit.Assert.assertTrue;
  * When you are comfortable you algo does what you expect, then you can move on to creating the MyAlgoBackTest.
  *
  */
+
 public class MyAlgoTest extends AbstractAlgoTest {
 
     @Override
@@ -54,3 +55,4 @@ public class MyAlgoTest extends AbstractAlgoTest {
         assertTrue("Sell order present!", sellOrderExists);
     }
 }
+//fixing commits
