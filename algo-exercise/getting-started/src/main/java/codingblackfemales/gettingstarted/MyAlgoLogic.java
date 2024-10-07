@@ -10,64 +10,91 @@ import messages.order.Side;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ *
+ * This algorithm uses Volume Weighted Average Price (VWAP) to decide whether to buy, sell, cancel, or hold shares.
+ *
+ * Strategy:
+ * - BUY when the current price is below the VWAP and the number of active buy orders is below a desired limit.
+ * - SELL when the current price is above the VWAP and there are active buy orders.
+ * - CANCEL orders when the VWAP indicates extreme market conditions to manage risk.
+ * - HOLD when none of the above conditions are met.
+ *
+ * VWAP Calculation:
+ *  VWAP = (Sum of (Price * Quantity) for all orders) / (Sum of Quantity for all orders)
+ * - Using the top 3 bid and ask levels to approximate the VWAP due to the absence of historical trade data.
+ * - This approach gives an estimate of market value based on the order book, providing an estimate of its liquidity.
+ * - Helps to make decisions without relying on past trading data.
+ * - If no active orders are present, a default VWAP is used.
+ *
+ * Risk Management:
+ * - Limits the total number of orders to prevent overexposure.
+ * - Cancels orders if VWAP is outside the acceptable range (too low or too high).
+ *
+ */
 
 public class MyAlgoLogic implements AlgoLogic {
 
+    // Tracking the state of the portfolio
     private long sharesOwned = 1000L; // Setting initial sharesOwned to 1000
     private long totalSpent = 0L; // tack the total money spent on buying shares
     private long totalEarned = 0L; // track the total money earned from selling shares
     private long profit = 0L; // tracks the overall profit/loss
 
-    enum TradeAction { // defining three possible actions my algo can take
+    // Defining possible trade actions
+    enum TradeAction {
         BUY, SELL, CANCEL, HOLD
     }
 
     private static final Logger logger = LoggerFactory.getLogger(MyAlgoLogic.class);
 
+    // Evaluate is called to determine the appropriate action based on market conditions
     @Override
     public Action evaluate(SimpleAlgoState state) {
 
         TradeAction action; // declaring a variable action that will hold the decisions (BUY,SELL,HOLD) made by the algo
 
-        BidLevel level = state.getBidAt(0); // to get the top bid (price + quantity) in the market to compare against the VWAP to make decisions
+        /* Retrieve the top bid level information from the market data
+        1. */
+        BidLevel level = state.getBidAt(0);
         final long price = level.price;
         final long quantity = level.quantity;
 
-        // CONSTANTS
+        // CONSTANTS FOR DESIRED AND TOTAL ORDER LIMITS
         final int DESIRED_ACTIVE_ORDERS = 3;
-        final int TOTAL_ORDER_LIMIT = 6; // exit statement
+        final int TOTAL_ORDER_LIMIT = 6;
 
-        // Get all active child orders
-        final var activeOrders = state.getActiveChildOrders(); // currently active (unfilled or un-cancelled) orders
-        final var totalOrders = state.getChildOrders().size(); // total number of orders, active or inactive
+        // Get active and total orders from the current state
+        final var activeOrders = state.getActiveChildOrders(); // Currently active (unfilled or un-cancelled) orders
+        final var totalOrders = state.getChildOrders().size(); // Total number of orders, active or inactive
 
         double totalMarketValue = 0.0; // store the total number of all active orders
-        long totalQuantity = 0; // stores the total number of shares (quantity) from all active orders
+        long totalQuantity = 0; // Stores the total number of shares (quantity) from all active orders
 
-        // Consider the top 3 bid and ask levels
-        int orderBookLevels = 3;
+        // Defines the number of bid and ask levels to be used for VWAP calculation
+        int orderBookLevels = 3; // using all 3 bid and asks levels on both order book sides
 
-        // looping through active orders
+        // Looping through the bid and ask levels to calculate totalMarketValue and totalQuantity
         for (int i = 0; i < orderBookLevels; i++) {
+            // Retrieve bid level at index i
             BidLevel bidLevel = state.getBidAt(i);
-            if (bidLevel !=null) {
-                totalMarketValue += bidLevel.price * bidLevel.quantity;
-                totalQuantity += bidLevel.quantity;
+            if (bidLevel !=null) { // Ensure the bid level exists
+                totalMarketValue += bidLevel.price * bidLevel.quantity; // Add (price * quantity) to totalMarketValue
+                totalQuantity += bidLevel.quantity; // Add quantity to totalQuantity
         }
 
-            // Get ask level
+            // Retrieve ask level at index i
             AskLevel askLevel = state.getAskAt(i);
-            if (askLevel != null) {
-                totalMarketValue += askLevel.price * askLevel.quantity;
-                totalQuantity += askLevel.quantity;
+            if (askLevel != null) { // Ensure the bid level exists
+                totalMarketValue += askLevel.price * askLevel.quantity; // Add (price * quantity) to totalMarketValue
+                totalQuantity += askLevel.quantity; // Add quantity to totalQuantity
             }
         }
 
-        // calculating VWAP (volume weighted average price)
+        // Calculating VWAP (Volume Weighted Average Price)
         double vWAP;
-        if (totalQuantity <= 0) {
-            // default VWAP if there are no active orders
-            vWAP = 90;
+        if (totalQuantity <= 0) { // If there are no active orders
+            vWAP = 90; // Set a default VWAP value
             logger.info("No active orders, using hardcoded initial VWAP: {}", vWAP);
 
             // if there are active order, calculate VWAP
@@ -77,23 +104,24 @@ public class MyAlgoLogic implements AlgoLogic {
             logger.info("Current total quantity = {}", totalQuantity);
         }
 
-        logger.info("Current VWAP value = {}", vWAP);
+        logger.info("Current VWAP value = {}", vWAP); // Log the calculated VWAP
 
-        // Debugging***
+        // To clarify decision-making
         logger.info("Checking if price: {} < VWAP: {}", price, vWAP);
 
-        // the total number of orders should not exceed 10
+        // Check if the total number of orders has reached or exceeded the limit
         if (totalOrders >= TOTAL_ORDER_LIMIT) {
             logger.info("[DYNAMIC-PASSIVE-ALGO] Total order limit reached. No new orders will be created.");
-            logFinalState();
+            logFinalState(); // Log the final state of the portfolio
             return NoAction.NoAction;
         }
 
-        // If there are less than 3 child orders, BUY (more)
+        // Decision-making based on price and VWAP
+        // If the price is below VWAP and there are fewer than desired active orders, BUY
         if (price < vWAP && state.getActiveChildOrders().size() < DESIRED_ACTIVE_ORDERS) {
             action = TradeAction.BUY;
 
-            // If the price is higher than VWAP and there are active orders to sell, SELL
+            // If the price is above VWAP, and there are active orders, and shares are more than 0, SELL
         } else if (price > vWAP && state.getActiveChildOrders().size() <= DESIRED_ACTIVE_ORDERS && sharesOwned > 0) {
             action = TradeAction.SELL;
 
