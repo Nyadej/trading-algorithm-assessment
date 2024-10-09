@@ -3,12 +3,15 @@ package codingblackfemales.gettingstarted;
 import codingblackfemales.action.*;
 import codingblackfemales.action.Action;
 import codingblackfemales.algo.AlgoLogic;
+import codingblackfemales.sotw.ChildOrder;
 import codingblackfemales.sotw.SimpleAlgoState;
 import codingblackfemales.sotw.marketdata.AskLevel;
 import codingblackfemales.sotw.marketdata.BidLevel;
 import messages.order.Side;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 /**
  *
@@ -24,13 +27,13 @@ import org.slf4j.LoggerFactory;
  *  VWAP = (Sum of (Price * Quantity) for all orders) / (Sum of Quantity for all orders)
  * - Using the top 3 bid and ask levels to approximate the VWAP due to the absence of historical trade data.
  * - This approach gives an estimate of market value based on the order book, providing an estimate of its liquidity.
- * - Helps to make decisions without relying on past trading data.
+ * - Helps to make decisions by striking a balance between capturing market trends and managing available data
  * - If no active orders are present, a default VWAP is used.
  *
  * Risk Management:
  * - Limits the total number of orders to prevent overexposure.
  * - Cancels orders if VWAP is outside the acceptable range (too low or too high).
- *
+ * - Cancel the oldest active order - helping to prevent holding onto positions that no longer align with the market
  */
 
 public class MyAlgoLogic implements AlgoLogic {
@@ -54,15 +57,14 @@ public class MyAlgoLogic implements AlgoLogic {
 
         TradeAction action; // declaring a variable action that will hold the decisions (BUY,SELL,HOLD) made by the algo
 
-        /* Retrieve the top bid level information from the market data
-        1. */
-        BidLevel level = state.getBidAt(0);
-        final long price = level.price;
-        final long quantity = level.quantity;
+        // Retrieve the top bid level information from the market data
+        BidLevel level = state.getBidAt(0); // Get the top bid (price + quantity) in the market
+        final long price = level.price;// Price of the top bid
+        final long quantity = level.quantity; // Quantity available at the top bid price
 
         // CONSTANTS FOR DESIRED AND TOTAL ORDER LIMITS
         final int DESIRED_ACTIVE_ORDERS = 3;
-        final int TOTAL_ORDER_LIMIT = 6;
+        final int TOTAL_ORDER_LIMIT = 5;
 
         // Get active and total orders from the current state
         final var activeOrders = state.getActiveChildOrders(); // Currently active (unfilled or un-cancelled) orders
@@ -78,10 +80,10 @@ public class MyAlgoLogic implements AlgoLogic {
         for (int i = 0; i < orderBookLevels; i++) {
             // Retrieve bid level at index i
             BidLevel bidLevel = state.getBidAt(i);
-            if (bidLevel !=null) { // Ensure the bid level exists
+            if (bidLevel != null) { // Ensure the bid level exists
                 totalMarketValue += bidLevel.price * bidLevel.quantity; // Add (price * quantity) to totalMarketValue
                 totalQuantity += bidLevel.quantity; // Add quantity to totalQuantity
-        }
+            }
 
             // Retrieve ask level at index i
             AskLevel askLevel = state.getAskAt(i);
@@ -99,12 +101,13 @@ public class MyAlgoLogic implements AlgoLogic {
 
             // if there are active order, calculate VWAP
         } else {
-            vWAP = totalMarketValue / (double) totalQuantity;
+            vWAP = totalMarketValue / (double) totalQuantity; // Calculate VWAP
             logger.info("Current total market value = {}", totalMarketValue);
             logger.info("Current total quantity = {}", totalQuantity);
         }
 
-        logger.info("Current VWAP value = {}", vWAP); // Log the calculated VWAP
+        // Log the calculated VWAP
+        logger.info("Current VWAP value = {}", vWAP);
 
         // To clarify decision-making
         logger.info("Checking if price: {} < VWAP: {}", price, vWAP);
@@ -113,6 +116,7 @@ public class MyAlgoLogic implements AlgoLogic {
         if (totalOrders >= TOTAL_ORDER_LIMIT) {
             logger.info("[DYNAMIC-PASSIVE-ALGO] Total order limit reached. No new orders will be created.");
             logFinalState(); // Log the final state of the portfolio
+            calculateROI(); // Calculate the return on investment
             return NoAction.NoAction;
         }
 
@@ -127,70 +131,82 @@ public class MyAlgoLogic implements AlgoLogic {
 
             // If the cancel condition is met (VWAP too low or too high), CANCEL the oldest active order
         } else if ((vWAP <= 60 || vWAP >= 90) && !state.getActiveChildOrders().isEmpty()) {
-                    logger.info("Cancel condition triggered: VWAP is: {} .", vWAP);
-                    logger.info("Number of active orders: {}", activeOrders.size());
-                    action = TradeAction.CANCEL;
+            logger.info("Cancel condition triggered: VWAP is: {} .", vWAP);
+            logger.info("Number of active orders: {}", activeOrders.size());
+            action = TradeAction.CANCEL;
 
-            // Otherwise, HOLD position
-                } else {
-                    action = TradeAction.HOLD;
-                }
-
-                switch (action) {
-                    case BUY:
-                        logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is less than VWAP: {}, buying shares", price, vWAP);
-                        sharesOwned += quantity;
-                        totalSpent += price * quantity; // because in order books, the price = the price per unit of the quantity being traded
-                        logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {}", sharesOwned, totalSpent);
-                        return new CreateChildOrder(Side.BUY, quantity, price);
-
-                    case SELL:
-                        logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is higher than VWAP: {}, selling shares", price, vWAP);
-
-                        // Ensure you own enough shares to sell
-                        if (sharesOwned > 0) {
-                            sharesOwned -= quantity;
-                            totalEarned += price * quantity;
-
-                            // Include market value of remaining shares in profit calculation
-                            long marketValueOfSharesOwned = sharesOwned * price;
-                            profit = (totalEarned + marketValueOfSharesOwned) - totalSpent;
-
-                            logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
-                            return new CreateChildOrder(Side.SELL, quantity, price);
-                        } else {
-                            return new CreateChildOrder(Side.SELL, sharesOwned, price);
-                        }
-
-                    case CANCEL:
-                        // 1. find the oldest active order
-                        final var oldestOrder = activeOrders.stream().findFirst().orElse(null);
-                        //var childOrder = oldestOrder.get();
-
-                        // 2. check if the oldest order exists
-                        if (oldestOrder != null) {
-                            // 3. extract the quantity and price of the oldest order
-                            long oldestOrderQuantity = oldestOrder.getQuantity();
-                            long oldestOrderPrice = oldestOrder.getPrice();
-
-                            logger.info("Cancelling oldest order: Price: {}, Quantity: {}", oldestOrder.getPrice(), oldestOrder.getQuantity());
-                            logger.info("Current VWAP: {} (out of the acceptable range)", vWAP);
-
-                            return new CancelChildOrder(oldestOrder);
-                        } else {
-                            logger.info("No valid order found to cancel.");
-                            return NoAction.NoAction;
-                        }
-
-                    default:
-                        logger.info("[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}.", sharesOwned);
-                        return NoAction.NoAction;
-
-                }
-
-            }
-
-            private void logFinalState() {
-                logger.info("[FINAL STATE REPORT \uD83C\uDFE6] Shares Owned: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
-            }
+            // If none of the above conditions are met, HOLD
+        } else {
+            action = TradeAction.HOLD;
         }
+
+        // Execute the above action
+        switch (action) {
+            case BUY:
+                // Log the BUY decision
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is less than VWAP: {}, buying shares", price, vWAP);
+                sharesOwned += quantity; // Increase sharesOwned by the quantity bought
+                totalSpent += price * quantity; // Update totalSpent by adding the cost of the purchase
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {}", sharesOwned, totalSpent);
+                return new CreateChildOrder(Side.BUY, quantity, price); // Create a new BUY order
+
+            case SELL:
+                // Log the SELL decision
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is higher than VWAP: {}, selling shares", price, vWAP);
+
+                // Ensure there are enough shares to sell
+                if (sharesOwned > 0) {
+                    sharesOwned -= quantity; // Decrease sharesOwned by the quantity sold
+                    totalEarned += price * quantity; // Update totalEarned by adding the revenue from the sale
+
+                    // Calculate profit including the current market value of remaining shares
+                    long marketValueOfSharesOwned = sharesOwned * price; // Current market value of owned shares
+                    profit = (totalEarned + marketValueOfSharesOwned) - totalSpent; // Calculate profit
+
+                    // Log the updated portfolio state
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
+                    return new CreateChildOrder(Side.SELL, quantity, price); // Create a new SELL order
+                } else {
+                    // If no shares are owned, attempt to sell what is owned (which is zero)
+                    return new CreateChildOrder(Side.SELL, sharesOwned, price); // ??
+                }
+
+            case CANCEL:
+                // Filter active orders to ensure they have a positive quantity
+                Optional<ChildOrder> oldestValidOrderOpt = activeOrders.stream()
+                        .filter(order -> order.getQuantity() > 0)
+                        .findFirst();
+                // Check if the oldest order exists
+                if (oldestValidOrderOpt.isPresent()) {
+                    ChildOrder oldestOrder = oldestValidOrderOpt.get();
+                    logger.info("Current VWAP: {} (out of the acceptable range)", vWAP);
+                    // Log the quantity and price of the oldest order
+                    logger.info("Cancelling oldest order: Price: {}, Quantity: {}", oldestOrder.getPrice(), oldestOrder.getQuantity());
+
+                    // Cancel the oldest order
+                    return new CancelChildOrder(oldestOrder);
+                } else {
+                    logger.info("No valid order found to cancel.");
+                    return NoAction.NoAction;
+                }
+
+            default:
+                // If the action is HOLD, log the current state and take no action
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}.", sharesOwned);
+                return NoAction.NoAction;
+
+        }
+
+    }
+
+    // Logs the final state of the portfolio when the order limit is reached.
+    private void logFinalState() {
+        logger.info("[FINAL STATE REPORT \uD83C\uDFE6] Shares Owned: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
+    }
+
+    // Method to calculate Return on Investment (ROI)
+    private void calculateROI() {
+        double roi = (double) profit / totalSpent * 100; // ROI as a percentage
+        logger.info("ROI \uD83D\uDCB0: {}%", roi);
+    }
+}
