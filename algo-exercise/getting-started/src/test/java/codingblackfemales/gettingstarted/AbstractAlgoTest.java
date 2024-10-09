@@ -72,7 +72,7 @@ public abstract class AbstractAlgoTest extends SequencerTestCase {
         return directBuffer;
     }
 
-    protected UnsafeBuffer createTickSell(){
+    protected UnsafeBuffer createTick(){ // Being used to test both sell and cancel actions
         final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
         final BookUpdateEncoder encoder = new BookUpdateEncoder();
 
@@ -96,6 +96,36 @@ public abstract class AbstractAlgoTest extends SequencerTestCase {
                 .next().price(100L).size(500L)
                 .next().price(102L).size(800L)
                 .next().price(104L).size(1000L);
+
+        encoder.instrumentStatus(InstrumentStatus.CONTINUOUS);
+
+        return directBuffer;
+    }
+
+    protected UnsafeBuffer createTickHold(){
+        final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+        final BookUpdateEncoder encoder = new BookUpdateEncoder();
+
+        final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024);
+        final UnsafeBuffer directBuffer = new UnsafeBuffer(byteBuffer);
+
+        // Write the encoded output to the direct buffer
+        encoder.wrapAndApplyHeader(directBuffer, 0, headerEncoder);
+
+        // Set the fields to desired values
+        encoder.venue(Venue.XLON);
+        encoder.instrumentId(123L);
+        encoder.source(Source.STREAM);
+
+        encoder.bidBookCount(3)
+                .next().price(70L).size(1000L)
+                .next().price(71L).size(1000L)
+                .next().price(72L).size(1000L);
+
+        encoder.askBookCount(3)
+                .next().price(73L).size(1000L)
+                .next().price(74L).size(1000L)
+                .next().price(75L).size(1000L);
 
         encoder.instrumentStatus(InstrumentStatus.CONTINUOUS);
 
