@@ -20,10 +20,7 @@ public class MyAlgoBackTest extends AbstractAlgoBackTest {
         send(createTickSell2());
         send(createTickCancel1());
         send(createTickBuy3());
-        send(createTickSell3());
         send(createTickBuy4());
-
-        // with the above ticks current ROI is ~30.61%
 
         //ADD asserts when you have implemented your algo logic
         //assertEquals(container.getState().getChildOrders().size(), 3);

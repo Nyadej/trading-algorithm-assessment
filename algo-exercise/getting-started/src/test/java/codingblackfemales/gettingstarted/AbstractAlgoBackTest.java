@@ -244,37 +244,6 @@ public abstract class AbstractAlgoBackTest extends SequencerTestCase {
         return directBuffer;
     }
 
-    // Tick 7: Encourage Sell
-    protected UnsafeBuffer createTickSell3(){
-        final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-        final BookUpdateEncoder encoder = new BookUpdateEncoder();
-
-        final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024);
-        final UnsafeBuffer directBuffer = new UnsafeBuffer(byteBuffer);
-
-        encoder.wrapAndApplyHeader(directBuffer, 0, headerEncoder);
-
-        encoder.venue(Venue.XLON);
-        encoder.instrumentId(123L);
-        encoder.source(Source.STREAM);
-
-        // Bid prices above VWAP to encourage SELL
-        encoder.bidBookCount(3)
-                .next().price(90L).size(700L) // 90 > VWAP
-                .next().price(92L).size(500L)
-                .next().price(95L).size(400L);
-
-        // Ask prices below VWAP
-        encoder.askBookCount(3)
-                .next().price(85L).size(600L)
-                .next().price(87L).size(700L)
-                .next().price(89L).size(900L);
-
-        encoder.instrumentStatus(InstrumentStatus.CONTINUOUS);
-
-        return directBuffer;
-    }
-
     // Tick 8: Encourage Buy
     protected UnsafeBuffer createTickBuy4(){
         final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
