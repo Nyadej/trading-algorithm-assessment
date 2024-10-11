@@ -39,10 +39,11 @@ import java.util.Optional;
 public class MyAlgoLogic implements AlgoLogic {
 
     // Tracking the state of the portfolio
-    private long sharesOwned = 1000L; // Setting initial sharesOwned to 1000
-    private long totalSpent = 0L; // tack the total money spent on buying shares
+    private long sharesOwned = 1200L; // Setting initial sharesOwned to 1200
+    private long totalSpent = 60000L; // Starting with
     private long totalEarned = 0L; // track the total money earned from selling shares
-    private long profit = 0L; // tracks the overall profit/loss
+    private double realisedProfit = 0; // tracks the overall profit/loss
+    private double estimatedProfit = 0;
 
     // Defining possible trade actions
     enum TradeAction {
@@ -57,7 +58,7 @@ public class MyAlgoLogic implements AlgoLogic {
 
         TradeAction action; // declaring a variable action that will hold the decisions (BUY,SELL,HOLD) made by the algo
 
-        // Retrieve the top bid level information from the market data
+        // The orders has the price and quantity of the top bid in the order book- Retrieve the top bid level information from the market data
         BidLevel level = state.getBidAt(0); // Get the top bid (price + quantity) in the market
         final long price = level.price;// Price of the top bid
         final long quantity = level.quantity; // Quantity available at the top bid price
@@ -66,7 +67,7 @@ public class MyAlgoLogic implements AlgoLogic {
         final int DESIRED_ACTIVE_ORDERS = 3;
         final int TOTAL_ORDER_LIMIT = 5;
 
-        // Get active and total orders from the current state
+        // Get active and total orders from the current state*
         final var activeOrders = state.getActiveChildOrders(); // Currently active (unfilled or un-cancelled) orders
         final var totalOrders = state.getChildOrders().size(); // Total number of orders, active or inactive
 
@@ -159,12 +160,13 @@ public class MyAlgoLogic implements AlgoLogic {
                     sharesOwned -= quantity; // Decrease sharesOwned by the quantity sold
                     totalEarned += price * quantity; // Update totalEarned by adding the revenue from the sale
 
-                    // Calculate profit including the current market value of remaining shares
-                    long marketValueOfSharesOwned = sharesOwned * price; // Current market value of owned shares
-                    profit = (totalEarned + marketValueOfSharesOwned) - totalSpent; // Calculate profit
+                    realisedProfit = totalEarned - totalSpent; // Calculate profit
+                    // Calculate estimated profit, including the current market value of remaining shares
+                    estimatedProfit = (totalEarned + sharesOwned * price) - totalSpent;
 
                     // Log the updated portfolio state
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, realisedProfit);
+                    logger.info("[DYNAMIC-PASSIVE-ALGO] Estimated Profit (including the current market value of remaining shares): {}", estimatedProfit);
                     return new CreateChildOrder(Side.SELL, quantity, price); // Create a new SELL order
                 } else {
                     // If no shares are owned, attempt to sell what is owned (which is zero)
@@ -201,12 +203,13 @@ public class MyAlgoLogic implements AlgoLogic {
 
     // Logs the final state of the portfolio when the order limit is reached.
     private void logFinalState() {
-        logger.info("[FINAL STATE REPORT \uD83C\uDFE6] Shares Owned: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, profit);
+        logger.info("[FINAL STATE REPORT \uD83C\uDFE6] Shares Owned: {} | Total Spent: {} | Total Earned: {} | Estimated Profit: {}", sharesOwned, totalSpent, totalEarned, estimatedProfit);
     }
 
     // Method to calculate Return on Investment (ROI)
     private void calculateROI() {
-        double roi = (double) profit / totalSpent * 100; // ROI as a percentage
-        logger.info("ROI \uD83D\uDCB0: {}%", roi);
+        double roi = realisedProfit / totalSpent * 100; // ROI as a percentage
+        double estimatedRoi = estimatedProfit / totalSpent * 100;
+        logger.info("ROI \uD83D\uDCB0: {}% | Estimated ROI \uD83D\uDCC8: {}%", roi, estimatedRoi);
     }
 }
