@@ -93,7 +93,7 @@ public class MyAlgoTest extends AbstractAlgoTest {
                 .count();
         assertEquals("Initial BUY orders count should be 3.", 3, buyOrdersBefore);
 
-        // 3. Capture the list of active order IDs before sending the HOLD-triggering tick
+        // 3. Capture the list of active order IDs before sending the HOLD tick
         List<Long> beforeOrderIds = container.getState().getActiveChildOrders().stream()
                 .map(ChildOrder::getOrderId)
                 .toList();
