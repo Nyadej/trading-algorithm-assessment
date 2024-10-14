@@ -1,6 +1,5 @@
 /*This project was made using SheCodes Plus (Advanced CSS course + React) with the help of SheCodes Athena AI */
 
-import { Placeholder } from "../placeholder";
 import { useMarketDepthData } from "./useMarketDepthData";
 import { schemas } from "../../data/algo-schemas";
 import { MarketDepthPanel } from "./MarketDepthPanel";
