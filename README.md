@@ -15,7 +15,7 @@ This project implements a dynamic trading algorithm that uses Volume Weighted Av
 
 The flowchart below illustrates the process of the trading algorithm, from portfolio initialization to decision-making and execution of trades. Each step corresponds to the logic implemented in the algorithm to determine how to interact with the market.
 
-![VWAP Algorithm Flowchart](Images/VWAP_Algorithm_Flowchart.jpeg)
+![VWAP Algorithm Flowchart](VWAP_Algorithm_Flowchart.jpeg)
 
 **How the Algorithm Works**
 
