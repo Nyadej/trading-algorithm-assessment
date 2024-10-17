@@ -10,7 +10,6 @@ import codingblackfemales.sotw.marketdata.BidLevel;
 import messages.order.Side;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.Optional;
 
 /**
@@ -58,7 +57,7 @@ public class MyAlgoLogic implements AlgoLogic {
 
         TradeAction action; // declaring a variable action that will hold the decisions (BUY,SELL,HOLD) made by the algo
 
-        // The orders has the price and quantity of the top bid in the order book- Retrieve the top bid level information from the market data
+        // Retrieve the top bid level information from the market data
         BidLevel level = state.getBidAt(0); // Get the top bid (price + quantity) in the market
         final long price = level.price;// Price of the top bid
         final long quantity = level.quantity; // Quantity available at the top bid price
@@ -148,7 +147,12 @@ public class MyAlgoLogic implements AlgoLogic {
                 logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is less than VWAP: {}, buying shares", price, vWAP);
                 sharesOwned += quantity; // Increase sharesOwned by the quantity bought
                 totalSpent += price * quantity; // Update totalSpent by adding the cost of the purchase
+
+                // Use VWAP to estimate the current value of shares for estimated profit calculation
+                estimatedProfit = (totalEarned + sharesOwned * vWAP) - totalSpent;
+
                 logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {}", sharesOwned, totalSpent);
+                logger.info("[DYNAMIC-PASSIVE-ALGO] Estimated Profit (including the current market value of remaining shares): {}", estimatedProfit);
                 return new CreateChildOrder(Side.BUY, quantity, price); // Create a new BUY order
 
             case SELL:
@@ -161,7 +165,7 @@ public class MyAlgoLogic implements AlgoLogic {
                     totalEarned += price * quantity; // Update totalEarned by adding the revenue from the sale
 
                     realisedProfit = totalEarned - totalSpent; // Calculate profit
-                    // Calculate estimated profit, including the current market value of remaining shares
+                    // Calculate estimated profit, which includes the value of remaining shares at the current market price
                     estimatedProfit = (totalEarned + sharesOwned * price) - totalSpent;
 
                     // Log the updated portfolio state
