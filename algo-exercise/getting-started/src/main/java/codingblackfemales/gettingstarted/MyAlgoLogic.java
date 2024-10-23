@@ -44,6 +44,14 @@ public class MyAlgoLogic implements AlgoLogic {
     private double realisedProfit = 0; // tracks the overall profit/loss
     private double estimatedProfit = 0;
 
+    public static final String GREEN = "\033[0;32m";     // Green text for Buy
+    public static final String RED = "\033[0;31m";       // Red text for Sell
+    public static final String YELLOW = "\033[0;33m";    // Yellow text for Cancel
+    public static final String BLUE = "\033[0;34m";      // Blue text for Hold
+    public static final String PURPLE = "\033[0;35m";    // Purple for Final Report
+    public static final String RESET = "\033[0m";      // Reset text color
+    public static final String CYAN = "\033[0;36m";    // Cyan text for VWAP
+
     // Defining possible trade actions
     enum TradeAction {
         BUY, SELL, CANCEL, HOLD
@@ -97,20 +105,20 @@ public class MyAlgoLogic implements AlgoLogic {
         double vWAP;
         if (totalQuantity <= 0) { // If there are no active orders
             vWAP = 90; // Set a default VWAP value
-            logger.info("No active orders, using hardcoded initial VWAP: {}", vWAP);
+            logger.info(CYAN + "No active orders, using hardcoded initial VWAP: {}" + RESET, vWAP);
 
             // if there are active order, calculate VWAP
         } else {
             vWAP = totalMarketValue / (double) totalQuantity; // Calculate VWAP
-            logger.info("Current total market value = {}", totalMarketValue);
-            logger.info("Current total quantity = {}", totalQuantity);
+            logger.info(CYAN + "Current total market value = {}" + RESET, totalMarketValue);
+            logger.info(CYAN + "Current total quantity = {}" + RESET, totalQuantity);
         }
 
         // Log the calculated VWAP
-        logger.info("Current VWAP value = {}", vWAP);
+        logger.info(CYAN + "Current VWAP value = {}" + RESET, vWAP);
 
         // To clarify decision-making
-        logger.info("Checking if price: {} < VWAP: {}", price, vWAP);
+        logger.info(CYAN + "Checking if price: {} < VWAP: {}" + RESET, price, vWAP);
 
         // Check if the total number of orders has reached or exceeded the limit
         if (totalOrders >= TOTAL_ORDER_LIMIT) {
@@ -131,8 +139,8 @@ public class MyAlgoLogic implements AlgoLogic {
 
             // If the cancel condition is met (VWAP too low or too high), CANCEL the oldest active order
         } else if ((vWAP <= 60 || vWAP >= 90) && !state.getActiveChildOrders().isEmpty()) {
-            logger.info("Cancel condition triggered: VWAP is: {} .", vWAP);
-            logger.info("Number of active orders: {}", activeOrders.size());
+            logger.info(YELLOW + "Cancel condition triggered: VWAP is: {} ." + RESET, vWAP);
+            logger.info(YELLOW + "Number of active orders: {}" + RESET, activeOrders.size());
             action = TradeAction.CANCEL;
 
             // If none of the above conditions are met, HOLD
@@ -144,20 +152,20 @@ public class MyAlgoLogic implements AlgoLogic {
         switch (action) {
             case BUY:
                 // Log the BUY decision
-                logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is less than VWAP: {}, buying shares", price, vWAP);
+                logger.info(RED + "[DYNAMIC-PASSIVE-ALGO] Price: {} is less than VWAP: {}, buying shares" + RESET, price, vWAP);
                 sharesOwned += quantity; // Increase sharesOwned by the quantity bought
                 totalSpent += price * quantity; // Update totalSpent by adding the cost of the purchase
 
                 // Use VWAP to estimate the current value of shares for estimated profit calculation
                 estimatedProfit = (totalEarned + sharesOwned * vWAP) - totalSpent;
 
-                logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {}", sharesOwned, totalSpent);
-                logger.info("[DYNAMIC-PASSIVE-ALGO] Estimated Profit (including the current market value of remaining shares): {}", estimatedProfit);
+                logger.info(RED + "[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {}" + RESET, sharesOwned, totalSpent);
+                logger.info(RED + "[DYNAMIC-PASSIVE-ALGO] Estimated Profit (including the current market value of remaining shares): {}" + RESET, estimatedProfit);
                 return new CreateChildOrder(Side.BUY, quantity, price); // Create a new BUY order
 
             case SELL:
                 // Log the SELL decision
-                logger.info("[DYNAMIC-PASSIVE-ALGO] Price: {} is higher than VWAP: {}, selling shares", price, vWAP);
+                logger.info(GREEN + "[DYNAMIC-PASSIVE-ALGO] Price: {} is higher than VWAP: {}, selling shares" + RESET, price, vWAP);
 
                 // Ensure there are enough shares to sell
                 if (sharesOwned > 0) {
@@ -169,8 +177,8 @@ public class MyAlgoLogic implements AlgoLogic {
                     estimatedProfit = (totalEarned + sharesOwned * price) - totalSpent;
 
                     // Log the updated portfolio state
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}", sharesOwned, totalSpent, totalEarned, realisedProfit);
-                    logger.info("[DYNAMIC-PASSIVE-ALGO] Estimated Profit (including the current market value of remaining shares): {}", estimatedProfit);
+                    logger.info(GREEN + "[DYNAMIC-PASSIVE-ALGO] Current Shares: {} | Total Spent: {} | Total Earned: {} | Profit: {}" + RESET, sharesOwned, totalSpent, totalEarned, realisedProfit);
+                    logger.info(GREEN + "[DYNAMIC-PASSIVE-ALGO] Estimated Profit (including the current market value of remaining shares): {}" + RESET, estimatedProfit);
                     return new CreateChildOrder(Side.SELL, quantity, price); // Create a new SELL order
                 } else {
                     // If no shares are owned, attempt to sell what is owned (which is zero)
@@ -185,20 +193,20 @@ public class MyAlgoLogic implements AlgoLogic {
                 // Check if the oldest order exists
                 if (oldestValidOrderOpt.isPresent()) {
                     ChildOrder oldestOrder = oldestValidOrderOpt.get();
-                    logger.info("Current VWAP: {} (out of the acceptable range)", vWAP);
+                    logger.info(YELLOW + "Current VWAP: {} (out of the acceptable range)" + RESET, vWAP);
                     // Log the quantity and price of the oldest order
-                    logger.info("Cancelling oldest order: Price: {}, Quantity: {}", oldestOrder.getPrice(), oldestOrder.getQuantity());
+                    logger.info(YELLOW + "Cancelling oldest order: Price: {}, Quantity: {}" + RESET, oldestOrder.getPrice(), oldestOrder.getQuantity());
 
                     // Cancel the oldest order
                     return new CancelChildOrder(oldestOrder);
                 } else {
-                    logger.info("No valid order found to cancel.");
+                    logger.info(YELLOW + "No valid order found to cancel." + RESET);
                     return NoAction.NoAction;
                 }
 
             default:
                 // If the action is HOLD, log the current state and take no action
-                logger.info("[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}.", sharesOwned);
+                logger.info(BLUE + "[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}. Trying to match and fill orders, otherwise will remove." + RESET, sharesOwned);
                 return NoAction.NoAction;
 
         }
@@ -207,13 +215,13 @@ public class MyAlgoLogic implements AlgoLogic {
 
     // Logs the final state of the portfolio when the order limit is reached.
     private void logFinalState() {
-        logger.info("[FINAL STATE REPORT \uD83C\uDFE6] Shares Owned: {} | Total Spent: {} | Total Earned: {} | Estimated Profit: {}", sharesOwned, totalSpent, totalEarned, estimatedProfit);
+        logger.info(PURPLE + "[FINAL STATE REPORT \uD83C\uDFE6] Shares Owned: {} | Total Spent: {} | Total Earned: {} | Estimated Profit: {}" + RESET, sharesOwned, totalSpent, totalEarned, estimatedProfit);
     }
 
     // Method to calculate Return on Investment (ROI)
     private void calculateROI() {
         double roi = realisedProfit / totalSpent * 100; // ROI as a percentage
         double estimatedRoi = estimatedProfit / totalSpent * 100;
-        logger.info("ROI \uD83D\uDCB0: {}% | Estimated ROI \uD83D\uDCC8: {}%", roi, estimatedRoi);
+        logger.info(PURPLE + "ROI \uD83D\uDCB0: {}% | Estimated ROI \uD83D\uDCC8: {}%" + RESET, roi, estimatedRoi);
     }
 }
