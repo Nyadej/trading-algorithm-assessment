@@ -105,20 +105,20 @@ public class MyAlgoLogic implements AlgoLogic {
         double vWAP;
         if (totalQuantity <= 0) { // If there are no active orders
             vWAP = 90; // Set a default VWAP value
-            logger.info(CYAN + "No active orders, using hardcoded initial VWAP: {}" + RESET, vWAP);
+            logger.info(CYAN + "[DYNAMIC-PASSIVE-ALGO] No active orders, using hardcoded initial VWAP: {}" + RESET, vWAP);
 
             // if there are active order, calculate VWAP
         } else {
             vWAP = totalMarketValue / (double) totalQuantity; // Calculate VWAP
-            logger.info(CYAN + "Current total market value = {}" + RESET, totalMarketValue);
-            logger.info(CYAN + "Current total quantity = {}" + RESET, totalQuantity);
+            logger.info(CYAN + "[DYNAMIC-PASSIVE-ALGO] Current total market value = {}" + RESET, totalMarketValue);
+            logger.info(CYAN + "[DYNAMIC-PASSIVE-ALGO] Current total quantity = {}" + RESET, totalQuantity);
         }
 
         // Log the calculated VWAP
-        logger.info(CYAN + "Current VWAP value = {}" + RESET, vWAP);
+        logger.info(CYAN + "[DYNAMIC-PASSIVE-ALGO] Current VWAP value = {}" + RESET, vWAP);
 
         // To clarify decision-making
-        logger.info(CYAN + "Checking if price: {} < VWAP: {}" + RESET, price, vWAP);
+        logger.info(CYAN + "[DYNAMIC-PASSIVE-ALGO] Checking if price: {} < VWAP: {}" + RESET, price, vWAP);
 
         // Check if the total number of orders has reached or exceeded the limit
         if (totalOrders >= TOTAL_ORDER_LIMIT) {
@@ -139,8 +139,8 @@ public class MyAlgoLogic implements AlgoLogic {
 
             // If the cancel condition is met (VWAP too low or too high), CANCEL the oldest active order
         } else if ((vWAP <= 60 || vWAP >= 90) && !state.getActiveChildOrders().isEmpty()) {
-            logger.info(YELLOW + "Cancel condition triggered: VWAP is: {} ." + RESET, vWAP);
-            logger.info(YELLOW + "Number of active orders: {}" + RESET, activeOrders.size());
+            logger.info(YELLOW + "[DYNAMIC-PASSIVE-ALGO] Cancel condition triggered: VWAP is: {} ." + RESET, vWAP);
+            logger.info(YELLOW + "[DYNAMIC-PASSIVE-ALGO] Number of active orders: {}" + RESET, activeOrders.size());
             action = TradeAction.CANCEL;
 
             // If none of the above conditions are met, HOLD
@@ -193,9 +193,9 @@ public class MyAlgoLogic implements AlgoLogic {
                 // Check if the oldest order exists
                 if (oldestValidOrderOpt.isPresent()) {
                     ChildOrder oldestOrder = oldestValidOrderOpt.get();
-                    logger.info(YELLOW + "Current VWAP: {} (out of the acceptable range)" + RESET, vWAP);
+                    logger.info(YELLOW + "[DYNAMIC-PASSIVE-ALGO] Current VWAP: {} (out of the acceptable range)" + RESET, vWAP);
                     // Log the quantity and price of the oldest order
-                    logger.info(YELLOW + "Cancelling oldest order: Price: {}, Quantity: {}" + RESET, oldestOrder.getPrice(), oldestOrder.getQuantity());
+                    logger.info(YELLOW + "[DYNAMIC-PASSIVE-ALGO] Cancelling oldest order: Price: {}, Quantity: {}" + RESET, oldestOrder.getPrice(), oldestOrder.getQuantity());
 
                     // Cancel the oldest order
                     return new CancelChildOrder(oldestOrder);
@@ -208,9 +208,7 @@ public class MyAlgoLogic implements AlgoLogic {
                 // If the action is HOLD, log the current state and take no action
                 logger.info(BLUE + "[DYNAMIC-PASSIVE-ALGO] Holding position, no action needed. Share quantity remains: {}. Trying to match and fill orders, otherwise will remove." + RESET, sharesOwned);
                 return NoAction.NoAction;
-
         }
-
     }
 
     // Logs the final state of the portfolio when the order limit is reached.
